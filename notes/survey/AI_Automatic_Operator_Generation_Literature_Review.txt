@@ -1,0 +1,832 @@
+
+
+
+AI-Driven Automatic Operator Generation
+A Frontier Literature Review and Research Landscape Assessment
+LLM/agent-driven GPU kernel synthesis · compiler auto-scheduling · program synthesis · neural & symbolic operators
+
+
+
+Scope: automatic GPU operator/kernel generation · deep-learning compiler scheduling ·
+program synthesis and algorithm discovery · neural operators and symbolic operator discovery
+
+Method: systematic sweep of arXiv / Crossref / OpenAlex / USENIX / MLSys; every entry cross-checked against primary sources
+Survey date: 2026-10-24
+Purpose: topic validation and feasibility assessment for the quantized-kernel benchmark project
+
+Contents
+AI-Driven Automatic Operator Generation: A Frontier Literature Review and Research Landscape Assessment	3
+0. Terminology: a problem that must be settled first	3
+1. Landscape: four generations of technical paradigms	5
+2. Main thread one: LLM/Agent-driven automatic GPU kernel generation (the current hotspot)	5
+2.1 Milestones and benchmarks	6
+2.2 The RL training route (the highest-performing branch)	8
+2.3 The agentic / multi-agent route (training-free)	11
+2.4 Train vs. don't train: an important fault line	16
+3. Main thread two: automatic scheduling and operator code generation in deep-learning compilers (the classical lineage)	17
+3.1 Foundational work	17
+3.2 Graph-level superoptimization (operator fusion / rewriting)	17
+3.3 The intersection with LLMs	18
+4. Main thread three: program synthesis and algorithm/operator invention	19
+4.1 RL discovers computational primitives	19
+4.2 LLM + evolutionary program search (the current paradigm)	20
+4.3 Self-improving systems	22
+5. Main thread four: the other "operator" — neural operators and symbolic operator discovery	22
+5.1 Neural operator learning (operator = a map between function spaces)	22
+5.2 Symbolic operator/equation discovery (the only literal "operator discovery")	25
+5.3 Explicit conclusions for topic validation	25
+6. Cross-cutting dimension one: verification, correctness, and benchmark validity (the core battleground of 2026)	26
+6.1 The "correctness illusion" trilogy	26
+6.2 Other important evaluation critiques	27
+6.3 The formal-verification route	29
+6.4 The numerical-faithfulness toolchain (easy to overlook, but reviewers will ask)	30
+6.5 DL-compiler fuzzing (transferable methodology)	30
+7. Cross-cutting dimension two: a comparison of search and learning paradigms	31
+8. Cross-cutting dimension three: cross-hardware and DSLs	32
+8.1 DSLs and abstraction levels	32
+8.2 The cross-platform state of play (the latest hard data)	32
+8.3 Sparsity and quantization	34
+9. Open problems and research opportunities (for topic validation)	35
+9.1 High-confidence, high-value entry points	35
+9.2 Medium-confidence, needs more validation	37
+9.3 Long-horizon, high-risk	39
+9.4 Explicit "do not do" (already saturated or about to be)	40
+10. Key-literature quick reference (tiered by importance)	41
+Tier 1: must-read (necessary to understand the field)	41
+Tier 2: important (forms the argument chain)	41
+Tier 3: background and adjacent (as needed)	41
+Neural-operator line (cite only when relevant to §5)	42
+11. Papers whose full text could not be obtained (please supply)	42
+11.1 Highest priority (key nodes in the argument chain)	42
+11.2 Important (to complete the argument)	47
+11.3 Nature family (abstract readable; full text requires subscription)	49
+11.4 Science / PNAS / other journals (if §5 is included)	50
+11.5 Non-paper artifacts (no "paper" to download; cite differently)	51
+12. One-page conclusion (for downstream assessment)	52
+
+
+AI-Driven Automatic Operator Generation: A Frontier Literature Review and Research Landscape Assessment
+Survey date: 2026-10-24 Purpose: topic validation and feasibility assessment for the quantized-kernel benchmark project Method: systematic sweep of arXiv abstract pages / Crossref / OpenAlex / USENIX / MLSys proceedings. Anything that could not be verified is explicitly flagged. Reading note: Section 0 (scope) is essential. Ignoring it conflates four mutually unrelated research communities into one.
+
+0. Terminology: a problem that must be settled first
+ A literature search shows that it covers at least four non-overlapping research communities, whose notions of "operator", evaluation criteria, and publication venues are entirely different:
+Interpretation
+English term
+Meaning of "operator"
+Representative work
+Main venues
+Section
+A. Automatic GPU operator/kernel generation
+Automatic kernel generation / CUDA kernel synthesis
+An executable implementation of a tensor computation (matmul, attention, softmax…)
+KernelBench, CUDA-Agent, Kevin, TVM/Ansor
+MLSys, OSDI, ASPLOS, NeurIPS
+§2, §3
+B. Automatic discovery/invention of algorithms and computational primitives
+Program synthesis / algorithm discovery
+Bilinear maps, sorting algorithms, heuristic functions
+AlphaTensor, AlphaDev, FunSearch, AlphaEvolve
+Nature, ICML, ICLR
+§4
+C. Neural operator learning
+Neural operator learning
+A map between function spaces, 𝒢: a(·) ↦ u(·)
+DeepONet, FNO
+ICLR, JMLR, NeurIPS
+§5.1
+D. Symbolic operator/equation discovery
+Symbolic operator / equation discovery
+Differential operators and right-hand sides in PDEs/ODEs
+SINDy, PDE-FIND, AI Feynman, PySR
+PNAS, Science Advances, JCP
+§5.2
+
+Key judgements:
+1. The current research hotspot, the industrial attention, and the overwhelming majority of papers that say "AI automatic operator generation" point to interpretation A — using LLMs/agents/RL to automatically write high-performance GPU kernels (operator implementations). This is the main thread of this review.
+2. Interpretation B is the methodological ancestor of A: the FunSearch/AlphaEvolve pattern of "LLM proposes + program evaluator scores + evolutionary search" is precisely the skeleton of every agentic system in A. The two should be read as one technical lineage.
+3. Interpretation C has essentially nothing to do with A/B. In the scientific-machine-learning literature the operator is learned, not generated; a Crossref search confirms that this community does not use the phrase "operator generation" at all.
+4. Interpretation D is the only one that literally approaches "generating an operator", but it is sparse symbolic regression whose output is an interpretable explicit equation, unrelated to code generation.
+Recommendation for downstream assessment: if the topic means "use AI to automatically produce high-performance operator implementations", adopt "automatic kernel generation / LLM-driven kernel synthesis" as the English keyword to avoid confusion with the neural-operator direction. If the topic is "let AI discover new mathematical operators or algorithms", position it under "algorithm discovery / program synthesis". The two use completely different discourse systems for proposals, review, and submission.
+
+1. Landscape: four generations of technical paradigms
+                     ┌─────────────────────────────────────────────────────────┐ Generation 1         │ Hand-written schedules + search                         │ (2013–2019)          │ Halide(2013) → TVM/AutoTVM(2018) → Tiramisu(2019)       │ "operator =          │ Halide auto-scheduler(2019)                             │  algorithm + schedule" └─────────────────────────────────────────────────────────┘                                         ↓                      ┌─────────────────────────────────────────────────────────┐ Generation 2         │ Automatic schedule search + learned cost models         │ (2020–2022)          │ Ansor(OSDI'20) → MetaSchedule(NeurIPS'22)               │ Hierarchical search  │ TensorIR(ASPLOS'23) / Roller(OSDI'22) / Hidet           │ space, evolutionary  │ Tensat / TASO (graph-level superoptimization)           │ search               └─────────────────────────────────────────────────────────┘                                         ↓                      ┌─────────────────────────────────────────────────────────┐ Generation 3         │ RL discovers algorithm primitives                       │ (2022–2024)          │ AlphaTensor(Nature'22) / AlphaDev(Nature'23)            │ "AI invents          │ FunSearch(Nature'24) / EoH(ICML'24)                     │  operators"          └─────────────────────────────────────────────────────────┘                                         ↓                      ┌─────────────────────────────────────────────────────────┐ Generation 4         │ LLM/Agent + RL + execution feedback, direct kernel      │ (2025–2026)          │ synthesis                                               │ "LLMs write          │ KernelBench(2025) / Kevin / CUDA-L1 / AutoTriton        │  operators"          │ CUDA-Agent(2026) / Dr.Kernel / QiMeng-Kernel            │                      │ AlphaEvolve(2025)                                       │                      └─────────────────────────────────────────────────────────┘
+The evolution in three sentences:
+The abstraction level moves up: pixel/loop level (Halide) → thread level (CUDA) → tile/block level (Triton/TileLang) → task-mapping level (Hidet/AKG). The tile level is the current dominant design point because it aligns naturally with the granularity of tensor cores and NPU MAC arrays.
+The search paradigm migrates: templates + cost models → hierarchical sampling + evolutionary search → construction-based (Roller's rTile) → LLM as proposal distribution + execution feedback as fitness.
+The bottleneck moves: from "cannot find a good program" to "cannot verify a good program". The most striking shift in 2026 is that verification and reward design have become the core contradiction (see §6).
+
+2. Main thread one: LLM/Agent-driven automatic GPU kernel generation (the current hotspot)
+2.1 Milestones and benchmarks
+KernelBench (arXiv:2502.10517, 2025-02) — the "ImageNet" of this field.
+Authors: Anne Ouyang, Simon Guo, Simran Arora, Alex L. Zhang, William Hu, Christopher Ré, Azalia Mirhoseini (Stanford)
+Content: 250 PyTorch workloads in three levels — L1 (single operator) / L2 (operator fusion) / L3 (full model).
+Key metric `fast_p`: the fraction of generated kernels that are both correct and at least p× faster than the baseline.
+Finding: frontier reasoning models are the best out of the box, but match the PyTorch baseline in fewer than 20% of cases; iteration with execution/profiling feedback helps, but the benchmark gets harder as p rises.
+Significance: almost every subsequent paper reports KernelBench L1/L2/L3 numbers, making it the de-facto standard.
+TritonBench (arXiv:2502.14752, 2025-02) — the Triton-side counterpart.
+Authors: Jianling Li, Shangzhan Li, … Zhiyuan Liu, Maosong Sun (Tsinghua)
+Content: 184 real-world Triton operators from GitHub plus a PyTorch-interface-aligned set, with efficiency profiling beyond correctness.
+Finding: state-of-the-art code LLMs fail to produce efficient Triton operators.
+robust-kbench (arXiv:2509.14279, 2025-09) — Sakana AI.
+Explicitly targets the exploitable loopholes and insufficient test diversity of existing benchmarks, paired with an agentic "translation → evolutionary meta-generation → LLM-verifier filtering" pipeline.
+Significance: established "reward hacking" as a benchmark-integrity problem.
+SOL-ExecBench (NVIDIA, arXiv:2603.19173, 2026-03) — measures against analytic speed-of-light upper bounds rather than software baselines; 235 problems drawn from 124 production/emerging models; Blackwell; forward + backward; BF16/FP8/NVFP4. It reframes the target from "beat PyTorch" to "approach the hardware roofline".
+KernelGenBench (arXiv:2607.27231, 2026-07) — the first unified multi-source × multi-chip benchmark.
+Unified target of Triton; the MS view has 210 operators (PyTorch ATen / vLLM / proprietary cuBLAS), the MC view has 110 operators across six hardware platforms; more than 15B tokens consumed.
+Finding: no method dominates across all sources and platforms; AutoKernel accuracy drops from 87% on NVIDIA to 25% on Iluvatar CoreX; about 5M tokens are needed per successful operator.
+Other new benchmarks: D2K-Bench (expert design → kernel, arXiv:2610.03226), RealisticTritonBench (ASE 2026, end-to-end tasks from real PRs), JAXBench (TPU, arXiv:2607.20466), PTXBench (architecture-specific PTX, arXiv:2608.17379), AscendGYM / CANN Bench (Ascend NPU), NKIBench (Trainium), KernelCraft (emerging hardware), MultiKernelBench (ACM, paywalled).
+2.2 The RL training route (the highest-performing branch)
+Kevin (arXiv:2507.11948, 2025-07) — the first multi-turn RL for CUDA generation.
+Base model QwQ-32B; correctness 56% → 82%, mean speedup 0.53× → 1.10× (vs PyTorch Eager), beating o4-mini's 0.78×.
+Important finding: serial iterative refinement outperforms parallel sampling (a path choice for test-time scaling).
+Proposes cross-turn reward attribution for long trajectories.
+CUDA-L1 (arXiv:2507.14111, 2025-07; accepted at ICLR 2026) — contrastive RL.
+Uses only a speedup reward, no human domain knowledge; on 250 KernelBench kernels it achieves an average 3.12×, median 1.42×, peak 120×; 2.77× over torch.compile and 7.72× over cuDNN.
+Finding: the model learns the "multiplicative nature of optimization" on its own and can reject optimizations that look helpful but are harmful.
+AutoTriton (arXiv:2507.05687, 2025-07) — the first Triton-dedicated RL model.
+SFT + GRPO, with rule-based and execution-based rewards combined; the 8B model matches Claude-4-Sonnet and DeepSeek-R1-0528 on five TritonBench channels.
+Dr. Kernel / KernelGYM (arXiv:2602.05885, 2026-02) — the most rigorous RL-theory contribution.
+Builds the KernelGYM distributed GPU RL environment (including reward-hacking detection).
+Identifies the self-inclusion bias in GRPO that yields biased policy gradients on kernel tasks, and proposes TRLOO (Turn-level Reinforce-Leave-One-Out) to correct it.
+Adds Profiling-based Rewards (PR) and Profiling-based Rejection Sampling (PRS) to suppress "lazy optimization".
+On KernelBench L2, 31.6% of kernels reach ≥1.2× (Claude-4.5-Sonnet 26.7%, GPT-5 28.6%).
+CUDA Agent (ByteDance, arXiv:2602.24286, 2026-02) — currently the strongest numbers.
+Three components: a scalable data-synthesis pipeline + a skill-augmented CUDA development environment (automated verification and profiling as rewards) + stable RL algorithms.
+On KernelBench, 100% / 100% / 92% of kernels are faster than torch.compile (L1/L2/L3); on L3 it beats Claude Opus 4.5 / Gemini 3 Pro by about 40%.
+KernelZero (arXiv:2609.33074, 2026-09) — two-model co-evolution.
+A Proposer (writes Torch modules) and a Coder (converts to CUDA/Triton) co-evolve, with CA-GRPO (guarantee correctness before optimizing performance) forming an automatic curriculum.
+KernelZero-7B: CUDA pass@1 75.8%/69.6% (KB L1/L2), Triton 77.2%/72.5%.
+CudaPerf (arXiv:2607.20908, 2026-07) — structural rewards.
+In addition to execution rewards, it turns memory coalescing, occupancy, arithmetic intensity, and synchronization into rewards, in two stages (offline contrastive ranking → online RL).
+daVinci-kernel (arXiv:2606.16497, 2026-06) — skill co-evolution.
+Three components (skill selection via BM25 + LLM reranking, policy, skill summarization) share one backbone and are jointly RL-optimized; a candidate skill enters the library only after execution-verified reproducible speedup.
+NKI-Agent (arXiv:2607.04395, 2026-07) — an important negative result.
+Ports the CUDA-Agent recipe to AWS Trainium's NKI.
+GRPO with a binary compile reward failed to beat SFT — a valuable counterexample for RL reward design.
+2.3 The agentic / multi-agent route (training-free)
+Astra (Stanford, arXiv:2509.07506, 2025-09) — the first LLM multi-agent GPU kernel optimization system.
+Key difference: it optimizes from existing CUDA kernels in SGLang rather than PyTorch→CUDA.
+o4-mini zero-shot average 1.32×.
+STARK (Meta et al., arXiv:2510.16996, 2025-10)
+Multi-agent collaboration + grounded instructions + dynamic context management + strategic search; up to 16× on KernelBench.
+K-Search (Berkeley, arXiv:2602.19128, 2026-02) — co-evolving world model.
+Replaces static evolutionary heuristics with a co-evolving world model; decouples high-level algorithmic planning from low-level program instantiation; tolerates temporary implementation defects (navigates non-monotonic paths).
+On FlashInfer kernels (GQA/MLA/MoE): 2.10× average, up to 14.3× on MoE.
+PRAGMA (Beihang, arXiv:2511.06345, 2025-11) — profiling-guided.
+Fine-grained hardware profiling + execution feedback enter the reasoning loop; covers both CPU (2.81×) and GPU (2.30×).
+GEAK (AMD, arXiv:2507.23194, 2025-07)
+Triton → AMD MI300X/MI250; Reflexion-style reasoning loop + inference-time compute scaling; up to 63% correctness and 2.59× speedup.
+AI CUDA Engineer (Sakana, 2025-09, technical report, not on arXiv)
+Proposes robust-kbench; PyTorch→CUDA translation + evolutionary meta-generation + LLM verifiers that classify incorrect kernels.
+Note: the early 2025-02 Sakana version's claimed hundred-fold speedups were later questioned, which directly motivated the subsequent reward-hacking critiques.
+KernelAgent (Meta/PyTorch, 2026, engineering blog + open-source repo, not a paper)
+The most complete multi-agent pipeline: ProfilerAgent (NCU metrics) → Judge/DiagnoseAgent (roofline analysis) → Analyzer/Prescriber (architecture-aware fixes) → Orchestrator (Reflexion + beam/greedy) → Optimization Manager (parallel workers over top-K) → BenchmarkAgent (correctness gate first, then timing).
+100 L1 KernelBench tasks (H100): the hardware-guided layer gives 2.02× over the correctness-only version and 1.56× over default torch.compile, beating torch.compile on 65/100 and reaching 89% roofline efficiency.
+CudaForge (arXiv:2511.01884, 2025-11) — extreme cost efficiency.
+Training-free Coder + Judge agents using NCU hardware feedback; 97.6% correctness, 1.68× average; about 26.5 minutes / 0.3 per kernel (versus roughly 6 H100-hours / 5 previously).
+QiMeng-Kernel (CAS/ICT, arXiv:2511.20100, 2025-11; AAAI 2026) — Macro-Thinking Micro-Coding.
+Macro-thinking uses RL to choose semantic optimization strategies; micro-coding uses a general LLM to implement them step by step, avoiding whole-kernel one-shot errors.
+KernelBench L1–L2 near 100%, L3 about 70%; TritonBench up to 59.64% correctness and 34× speedup.
+KernelPro / Optimizing CUDA like a Human (AWS, arXiv:2606.26453, 2026-06) — the most rigorous ablations.
+Micro-profiling tools act as "expert surrogates"; two-stage tool invocation (roofline classification decides whether to run ncu/SASS/nsys); domain-adapted MCTS; direct CuTe generation.
+KernelBench geomean 2.42×/4.69×/5.30× (L1/L2/L3); MoE kernel 1.23× faster than hand-tuned Triton.
+Ablations: micro-profiling tools p<0.0001; MCTS +26% over greedy (p=0.004); proactive tool orchestration +23% (p=0.035).
+Harness Engineering (arXiv:2607.17979, 2026; MLSys 2026 FlashInfer contest)
+Separates the evaluation harness from the profiling-driven optimization controller; human-authored "skills" constrain operators; Codex + Claude Code generate candidates within the constraints.
+Key finding: Agent-Assisted > Full-Agent — humans as orchestrators remain irreplaceable.
+KernelSeek / Ask, Don't Equip (arXiv:2611.03517, 2026-11)
+A counter-mainstream argument: structured agents stall, open-ended agents waste trials, and both "lack direction".
+Method: a general coding agent + a minimal harness + asking questions at decision points.
+Result: on the same task, hardware, and week, a tool-rich prevailing-style agent plateaued at 0.50× of FlashAttention-3 after 133 steps; KernelSeek reached 1.13×; its dependency-free FlashAttention forward kernel is 1.16× FA-3 / 1.46× FA-4 on Hopper/Blackwell.
+Insight: gains come from questions that move the agent to a different system layer or reject its own claimed limit, not from questions that supply information.
+JustGoal (Tsinghua, arXiv:2610.36434, 2026-10) — a direct challenge to the necessity of scaffolding.
+A general agent with no kernel-specific infrastructure, knowledge, or workflows builds its own evaluation loop; on B200 it beats open-source libraries on 8 of 10 operators (1.14–2.34×).
+2.4 Train vs. don't train: an important fault line
+Route
+Representatives
+Advantages
+Disadvantages
+Train model capability
+CUDA-Agent, CUDA-L1, Kevin, AutoTriton, KernelZero, KernelMosaic, AMDKernelVault
+Highest performance ceiling
+Very high infrastructure/data cost
+Scaffold without training
+CudaForge, GEAK, KernelAgent, robust-kbench, KernelSeek
+Cheap, model-agnostic, cross-GPU
+Ceiling bounded by the base model
+Distill trajectories
+KernelMosaic (after SFT, L1/L2/L3 go from 4/0/0% → 88/82/16%)
+In between; good cost-benefit
+L3 still poor
+
+KernelMosaic's key finding: trajectory supervision substantially outperforms direct-answer supervision. This suggests that distilling the agentic loop into the model is a high-value path.
+
+3. Main thread two: automatic scheduling and operator code generation in deep-learning compilers (the classical lineage)
+This line is the prehistory and infrastructure of main thread one. Even if the topic only concerns LLMs, it must be cited, because: KernelBench's baseline is torch.compile, torch.compile's backend is TorchInductor + Triton, and Triton's design idea derives from Halide's algorithm/schedule separation.
+3.1 Foundational work
+Work
+Year/venue
+Core contribution
+Key numbers
+Halide
+PLDI 2013
+Algorithm/schedule separation; the schedule becomes a searchable object
+Conceptual starting point
+TVM
+OSDI 2018, arXiv:1802.04799
+Two-level IR (graph + operator); introduces AutoTVM
+Matches hand-tuned libraries across backends
+Learning to Optimize Tensor Programs
+NeurIPS 2018, arXiv:1805.08166
+Learned cost model + transfer
+The core of AutoTVM
+Ansor
+OSDI 2020, arXiv:2006.06762
+Hierarchical search space + evolutionary search + learned cost model + task scheduler
+3.8×/2.6×/1.7× (Intel/ARM/NVIDIA)
+Tiramisu
+ASPLOS 2019, arXiv:1804.10694
+Polyhedral + four-level IR, scheduling language
+—
+Tensor Comprehensions
+arXiv:1802.04730
+Math-like DSL → CUDA, JIT + fusion + specialization
+—
+MLIR
+arXiv:2002.11054; CGO 2021
+Multi-level dialect IR infrastructure
+Backbone of the whole ecosystem
+TensorIR
+ASPLOS 2023, arXiv:2207.04296
+Tensorization as a first-class citizen; automatic tensorize
+—
+MetaSchedule
+NeurIPS 2022, arXiv:2205.13603
+Probabilistic-program search space
++48% end-to-end
+Roller
+OSDI 2022
+Construction-based (rTile + micro-performance model), not search
+Seconds-level generation
+Hidet
+ASPLOS 2023, arXiv:2210.09603
+Task-mapping paradigm + automatic fusion
+1.22× average, 20× less tuning time
+Bolt
+MLSys 2022, arXiv:2110.15238
+Hardware-native templates (CUTLASS) composed into auto-tuning
+2.5× average, tuned in 20 minutes
+
+3.2 Graph-level superoptimization (operator fusion / rewriting)
+TASO (SOSP 2019) — automatically generates graph substitutions and verifies them (random testing + SMT + operator axioms), then composes substitution sequences via backtracking/random search. This is the actual home of "data-driven equivalence checking of tensor programs".
+Tensat (ICLR 2021, arXiv:2101.01332) — equality saturation (e-graph); applies all substitutions at once and extracts the best graph; 16% faster than the state of the art with 48× less optimization time.
+DNNFusion (arXiv:2108.13342) — operator-view fusion + mathematical-property graph rewriting; 8.8× more fusion opportunities and 9.3× speedup on 15 models.
+The 2026 EqSat wave: Prism (symbolic superoptimization, arXiv:2604.15272), Axon (synthesis-based superoptimization, arXiv:2606.26344), joint algebraic and low-level EqSat (arXiv:2609.12330), LLM-guided EqSat strategy synthesis (arXiv:2604.17364).
+SPIRAL (Proc. IEEE 2018) — rule-rewriting program generation (FFT etc.), in contrast to search-based methods.
+3.3 The intersection with LLMs
+LLM Compiler (Meta, arXiv:2309.07062 / 2407.02524): 7B/13B compiler foundation models; 3.0% instruction-count reduction, 91% compilable.
+Agentic Auto-Scheduling (PACT 2025, arXiv:2511.00592): an LLM agent performs loop-transformation scheduling.
+Compiler-R1 (arXiv:2506.15701): agentic compiler auto-tuning.
+CAKE (arXiv:2608.12629, 2026-08): agents directly author CAKE IR — a typed, hardware-explicit schedule representation (warp roles, memory movement, synchronization, pipelines) with verification, cost modeling, and localized diagnostics; the harness itself evolves with failures. This is the TileLang/FlashInfer lineage meeting agents.
+AI as a Compiler (arXiv:2609.36800, 2026-09): an LLM lowers Triton directly to PTX, bypassing the Triton compiler; on 12 + 10 kernels it reaches 0.83×–3.34× of autotuned Triton. This is the strongest evidence of an LLM replacing rather than using the lowering pipeline.
+
+4. Main thread three: program synthesis and algorithm/operator invention
+4.1 RL discovers computational primitives
+AlphaTensor (Nature 610:47–53, 2022, DOI 10.1038/s41586-022-05172-4)
+An AlphaZero-style single-player game that searches tensor decompositions (matrix-multiplication algorithms) over finite fields/rings.
+Beats previous optimal complexity for several matrix sizes; improves Strassen's two-level algorithm on 4×4 over finite fields; can also target actual hardware runtime.
+Significance: AI invented a new arithmetic primitive.
+AlphaDev (Nature 618:257–263, 2023, DOI 10.1038/s41586-023-06004-9)
+Constructs sorting and hashing algorithms from scratch at the assembly/instruction level; merged into LLVM libc++'s `std::sort` — the first RL-discovered algorithm component shipped in a production standard library.
+AlphaTensor-Quantum (arXiv:2402.14396, 2024) — reduces T-count optimization to tensor decomposition; quantum-circuit "operator" optimization.
+4.2 LLM + evolutionary program search (the current paradigm)
+FunSearch (Nature 625:468–475, 2024, DOI 10.1038/s41586-023-06924-6)
+LLM proposes program mutations + a systematic evaluator scores them + the best programs are fed back.
+It searches over programs (how to solve) rather than over solutions.
+Results: new constructions for the cap-set problem; new online bin-packing heuristics; the discovered programs are often interpretable.
+AlphaEvolve (arXiv:2506.13131, 2025-06)
+An evolutionary coding agent (Gemini-based) that edits code directly, with continuous evaluator feedback.
+Results: a data-center scheduling algorithm (matching/exceeding Google's production scheduler), an equivalent simplification of a hardware-accelerator circuit, and 4×4 complex matrix multiplication in 48 scalar multiplications — the first improvement in 56 years over Strassen's algorithm in this setting.
+EoH (ICML 2024 Oral, arXiv:2401.02051) — co-evolves "thoughts + code snippets"; surpasses FunSearch with fewer LLM queries; 51 new best-known solutions on CVRP; a new world record in 26-circle packing (2.63594).
+ELM (arXiv:2206.08896, 2022) — uses an LLM as the mutation operator in genetic programming + MAP-Elites; a foundational idea.
+OpenEvolve (open source, codelion/openevolve) — an open-source implementation of AlphaEvolve with MAP-Elites + island models; no formal paper, but essential for reproduction.
+LLM-SR (ICLR 2025 Oral, arXiv:2404.18400) — treats equations as programs with mathematical operators; LLM priors + evolutionary search over the program space.
+AutoML-Zero (ICML 2020, arXiv:2003.03384) — evolves two-layer nets + backpropagation from basic mathematical operators.
+DreamCoder (PLDI 2021, DOI 10.1145/3453483.3454080) — wake-sleep Bayesian program learning that automatically invents reusable abstractions (library learning); rediscovers the basics of functional programming, vector algebra, and Newton's/Coulomb's laws. This is the purest intellectual origin of "automatic operator-library generation".
+4.3 Self-improving systems
+STOP (COLM 2024, arXiv:2310.02304) → Gödel Agent (ACL 2025, arXiv:2410.04444) → ADAS / Meta Agent Search (arXiv:2408.08435) → Darwin Gödel Machine (arXiv:2505.22954) (SWE-bench 20.0%→50.0%, Polyglot 14.2%→30.7%).
+This line answers "can the system that generates operators improve itself?", which bears directly on the long-term agenda (self-evolving compilers).
+
+5. Main thread four: the other "operator" — neural operators and symbolic operator discovery
+The main purpose of this section is to prevent topic collisions. If the topic is not this direction, reading the conclusion in §5.3 is enough.
+5.1 Neural operator learning (operator = a map between function spaces)
+Theoretical roots
+Chen & Chen (1995), IEEE TNN 6(4):911–917, DOI 10.1109/72.392253 — the universal approximation theorem for operators.
+Kovachki, Lanthaler, Mishra (JMLR 2021, arXiv:2107.07562) — universal approximation and explicit error bounds for FNOs; for Darcy-type elliptic operators and incompressible NS, size grows only sub-log-linearly in 1/ε (breaking the curse of dimensionality).
+Lanthaler, Mishra, Karniadakis (arXiv:2102.09618) — decomposes DeepONet error into encoding + approximation + reconstruction; a curse of dimensionality exists for Lipschitz operators and can be broken for concrete examples.
+Boullé & Townsend (arXiv:2312.14688; Handbook of Numerical Analysis 25:83–125, 2024) — the best introductory survey.
+The two flagship architectures
+DeepONet (arXiv:1910.03193; Nature Machine Intelligence 3:218–229, 2021, DOI 10.1038/s42256-021-00302-5): branch net (input functions sampled at fixed sensors) + trunk net (output query location) + inner product; high-order convergence.
+FNO (ICLR 2021, arXiv:2010.08895): parameterizes the integral kernel in Fourier space (FFT → linear transform on low modes → IFFT) + a local linear term; three orders of magnitude faster than conventional solvers; the first ML method to model turbulent flow with zero-shot super-resolution.
+The design axis of basis choice (important, because it determines the architecture family): Fourier (FNO), Laplace (LNO, arXiv:2303.10528), wavelet/multiwavelet (WNO arXiv:2205.02191; Multiwavelet NeurIPS 2021, arXiv:2109.13459), Chebyshev/Fourier series (SNO, arXiv:2205.10573), convolution (CNO, NeurIPS 2023, arXiv:2302.01178), graph/message passing (GNO, arXiv:2003.03485), Transformer (GNOT, ICML 2023, arXiv:2302.14376).
+Geometry and multi-input extensions: Geo-FNO (JMLR 2023, arXiv:2207.05209, learns a deformation map to a uniform grid; 10⁵× faster than numerical solvers), MIONet (SIAM J. Sci. Comput. 44:A3490–A3514, 2022, arXiv:2202.06137, multiple branches + tensor product).
+The key conclusion of the fair comparison: after 16 benchmarks, Lu et al. (arXiv:2111.05512, CMAME 2022) find — the two are comparable on simple cases; FNO accuracy "deteriorates greatly" on complex geometries; under 0.1% noise FNO error rises by about 10,000× while DeepONet is barely affected. This is the key citation for robustness comparisons.
+The 2024–2026 frontier: physics-informed + PDE foundation models
+PINO (arXiv:2111.03794): PDE-residual loss + zero-shot super-resolution at higher resolution.
+DPOT (ICML 2024, arXiv:2403.03542): autoregressive denoising pre-training, 0.5B parameters, 10+ PDE datasets.
+Poseidon (NeurIPS 2024, arXiv:2405.19101): multiscale operator Transformer + time-conditioned LayerNorm + semi-group training; 15 downstream tasks.
+PILNO (arXiv:2602.12706, 2026-02), WLNO (arXiv:2605.24658, 2026-05): physics-informed + basis hybridization.
+5.2 Symbolic operator/equation discovery (the only literal "operator discovery")
+Work
+Venue
+Method
+Result
+SINDy
+PNAS 113:3932–3937, 2016, DOI 10.1073/pnas.1517384113
+Candidate library + sparse regression (STLSQ)
+Recovers Lorenz etc.
+PDE-FIND
+Science Advances 3:e1602614, 2017, DOI 10.1126/sciadv.1602614
+Spatial-derivative candidate library + sparse regression
+Recovers the NS equation from data
+SINDy-PI
+Proc. R. Soc. A 476:20200279, 2020
+Implicit parallel sparse identification
+Handles rational/reciprocal terms
+WSINDy
+JCP 443:110525, 2021
+Weak (integral) form, avoiding derivative estimation
+Robust to high noise
+SINDy-AE
+PNAS 116:22445–22451, 2019
+Autoencoder learns coordinates + latent-space SINDy
+Jointly discovers coordinates and operator
+AI Feynman
+Science Advances 6:eaay2631, 2020
+Physics-inspired recursive decomposition (symmetry/separability)
+100/100 Feynman equations; hard set 15%→90%
+AI Feynman 2.0
+NeurIPS 2020, arXiv:2006.10782
+Neural-gradient generalized-symmetry detection + normalizing flows
+Order-of-magnitude noise robustness
+PySR
+arXiv:2305.01582, 2023
+Multi-population evolution + autodiff + operator fusion
+The de-facto standard tool
+
+5.3 Explicit conclusions for topic validation
+1. In scientific ML, "operator" is a learned/discovered map between function spaces, not generated code.
+2. A Crossref search confirms that this community does not use the phrase "operator generation"; that phrase belongs to HPC kernel code generation and quantum operator/circuit synthesis.
+3. If the topic uses the term "operator generation", it must define in the introduction what is meant; otherwise reviewers will almost certainly read it as the neural-operator direction and judge the topic non-novel.
+4. The only thing that can be called "automatic operator discovery" is the symbolic-regression line (SINDy → AI Feynman → PySR), but its output is an interpretable equation, not an executable kernel.
+
+6. Cross-cutting dimension one: verification, correctness, and benchmark validity (the core battleground of 2026)
+This is the most information-dense and most promising as a topic entry point part of this survey. In 2025–2026 a cluster of papers appeared specifically attacking benchmark validity, and they are rewriting the field's evaluation standards.
+6.1 The "correctness illusion" trilogy
+The Correctness Illusion in LLM-Generated GPU Kernels (arXiv:2606.20128, 2026-06)
+Shows that KernelBench / TritonBench / GEAK rely on fixed-shape, small-sample allclose checks.
+Re-tests 24 kernels (15 correct controls + 9 LLM-style buggy) under operator-schema-aware seeded fuzzing + fp64 CPU reference + per-(op, dtype) tolerances.
+Result: the seeded oracle catches 9/9 bugs and passes 15/15 controls at zero precision cost; extended to 26 operators × 5 GPU classes (RTX 3060/A10/L40S/A100/H100) with identical verdicts; failures replay byte-for-byte.
+Self-stated limitation: only targets "transcription-style bugs", not an estimate of a deployed LLM's bug rate.
+Measuring the Checker: Mutation Analysis for GPU-Kernel Benchmark Oracles (arXiv:2609.22220, 2026-09) — the strongest critique.
+Injects thousands of compilable faults into verified CUDA implementations of 188 KernelBench problems, scoring any test protocol by the fraction of witnessed faults detected.
+Result: the official checker deterministically misses 1/6 (16.9%) of witnessed faults, with a stark skew — 8.7% for arithmetic faults vs 78.6% for precision faults; a published fuzzing recipe rejects correct kernels 107 times; an optimized suite reaches 98.0% detection with 2 inputs/problem (94.8% held-out); blindness grows with scale across 48 architectures; 2 problems are "unrefereeable". Artifact: KernelBench-M.
+KernelBench-Verified: Do LLM-Generated Kernels Actually Beat PyTorch? (arXiv:2607.16241, 2026-06)
+Identifies two gaps: baseline timing ignoring TF32 Tensor Core acceleration; algorithmic cheating (hardcoding bypasses for specific tensor values).
+Adds a TF32-enabled baseline + a four-distribution hidden test suite + memory-efficiency metrics.
+Result: GPT-5.5 drops from 1.43× under the standard protocol to 0.88× under the verified protocol; no model consistently beats PyTorch; 28% of the best model's kernels increase peak memory.
+6.2 Other important evaluation critiques
+Correct but Slow (arXiv:2607.04454, 2026-07) — across 22 Triton/TileLang kernels, an idiomatic TileLang LayerNorm passes KernelBench's correctness check while running 300× slower than PyTorch; two lightweight checks (library-relative efficiency + roofline utilization) flag every functionally correct but inefficient kernel.
+How Much of a Real Workload Can LLM-Generated GPU Kernels Actually Reach? (arXiv:2609.21058, 2026-09)
+KernelBench L1 correctness is 91.1%, but the addressable fraction of real workload runtime is only 8.9%–58.2%; transformers spend 80–86% of time in cuBLAS GEMM + FlashAttention, capping end-to-end gains near 1%.
+KernelBench's allclose is satisfied by zero tensors on 4 of 60 L1 problems; one kernel scored 283× while writing 0.3% of the output.
+Atrex-Bench / Are LLM-Generated GPU Kernels Production-Ready? (arXiv:2607.14541, 2026)
+30 operators from production cluster inference traces / 440 shapes; the best model reaches only ~10% of the hardware roofline; much of the apparent pass rate is PyTorch fallbacks, not real kernels.
+KernelAudit (arXiv:2611.15506, 2026-11) — audits the validator itself: it wrongly accepts forbidden library calls and wrongly rejects permitted usage; proposes a three-dimensional independent audit oracle.
+"God Does Not Play Dice" (arXiv:2610.36623, 2026-10) — reveals that kernel agents generally ignore batch invariance; 19 confirmed violations among 83 released artifacts; proposes contract-guided static dependency analysis + dynamic bitwise-consistency gates.
+AutoTuneBench (arXiv:2609.18123, 2026-09) — proposes a "measurement-as-code" protocol; the best kernel is 10.6× over a naive baseline but only 2.03× over an honest baseline; the same config gives 1.174× on one machine vs 1.0049× on another.
+6.3 The formal-verification route
+Proving LLM-Generated GPU Kernels Correct and Safe (arXiv:2610.24548, 2026-10)
+An LLM agent uses Velvet (a Lean-embedded verifier for imperative programs) to prove semantic equivalence between generated CUDA and a high-level spec; uses VerCors to prove thread safety/data-race freedom; floating-point reasoning always goes through the Lean kernel, never compiled code.
+KernelArmor (arXiv:2611.18754, 2026-11)
+LLM-generated annotations + an extended SMT verifier handling tensor cores, packed accesses, warp sync, async copies, and library calls.
+Across 740 instances / 1,370 production kernels: flags 78.6% of potential bugs and establishes safety for 11.4%; identifies 100% of cuCatch memory-safety bugs and all in-scope cuHadron races; used in-loop, it produces verified kernels in all 77 trajectories while retaining 99% of the unconstrained speedup.
+TensorRight (POPL 2025, arXiv:2511.17838) — automatically proves tensor rewrite rules for arbitrary rank/size; proves 115 of 175 XLA algebraic-simplifier rules (the previous best handled only 18).
+Exo-GPU (arXiv:2609.16389, 2026-09) — writes parallelism/synchronization as annotations on sequential code, and the compiler verifies sequential-parallel equivalence; H100 GEMM reaches 80%+ of peak, sometimes beating cuBLAS.
+Tenspiler (arXiv:2404.18249) — a verified lifting-based compiler covering 6 DSLs; 105× kernel speedup.
+BOLT (arXiv:2609.30651, 2026) — verifies compiler-to-accelerator mappings (intrinsic lowering aligned with hardware semantics).
+6.4 The numerical-faithfulness toolchain (easy to overlook, but reviewers will ask)
+Herbie (PLDI 2015), Herbgrind (PLDI 2018), Satire (SC 2020), MegaLibm (POPL 2024), Chassis (ASPLOS 2025): floating-point expression rewriting and error certification.
+Fasi, Higham, Mikaitis, Pranesh (PeerJ CS 7:e330, 2021): tensor-core reduction precision behavior — explains why kernel "correctness" must be tolerance-aware.
+NVIDIA compute-sanitizer: memcheck / racecheck / initcheck / synccheck — the practical safety gate for generated kernels today.
+6.5 DL-compiler fuzzing (transferable methodology)
+Csmith (PLDI 2011) → NNSmith (OSDI 2023, arXiv:2207.13066) → Tzer (OOPSLA 2022, arXiv:2202.09947, coverage-guided IR + pass mutation) → HirGen (ISSTA 2023) → NeuRI (ISSTA 2023) → WhiteFox (OOPSLA 2024, arXiv:2310.15991, LLM white-box compiler fuzzing, 101 bugs, 70 fixed, adopted into the PyTorch workflow) → DESIL (arXiv:2504.01379, silent bugs) → FLEX (ASE 2025) → Reprise (arXiv:2610.06968, 2026, crash reports down 90.2%/93.8%) → TorchProbe (arXiv:2310.20078, dynamic-graph compilers).
+EvalPlus (NeurIPS 2023, arXiv:2305.01210) is the analogue on general code generation: after 80× test expansion, pass@k drops 19.3–28.9% and models can be mis-ranked.
+
+7. Cross-cutting dimension two: a comparison of search and learning paradigms
+Paradigm
+Representatives
+Pros
+Cons
+2026 status
+Templates + cost model
+AutoTVM
+Stable, interpretable
+Search space must be hand-written
+Absorbed into MetaSchedule
+Hierarchical sampling + evolution
+Ansor, FlexTensor, MetaSchedule
+Broad coverage
+High measurement cost
+Classical baseline
+Construction-based
+Roller (rTile)
+Seconds-level compilation
+Depends on a micro-performance model
+Marginalized
+Hardware-native template composition
+Bolt
+Matches hand-tuned libraries
+Depends on backend ecosystem
+Marginalized
+RL for schedule/transform selection
+Chameleon/ReLeASE, NeuroVectorizer, AutoPhase, MLGO
+Can replace heuristics
+Sample cost
+Diluted by the LLM route
+LLM evolutionary search
+FunSearch, AlphaEvolve, EoH, OpenEvolve
+No training, interpretable
+Requires an evaluator
+Mainstream
+LLM agentic RL
+CUDA-Agent, CUDA-L1, Kevin
+Highest performance ceiling
+Heavy infrastructure
+Source of SOTA
+Training-free agents
+CudaForge, KernelSeek, KernelAgent
+Cheap, model-agnostic
+Bounded by the base model
+Proliferating
+MCTS search
+KernelPro, Kernel Forge, AI-Scientist-v2
+Non-linear exploration
+Expensive
+Rising
+Multi-armed bandit
+KernelBand (arXiv:2511.18868)
+Regret bounds
+Requires hardware-aware pruning
+Novel angle
+
+Key empirical result (Sakana, arXiv:2507.02554): ML-engineering agent performance is determined by the pairing of search policy × operator set; the best pairing raises the medal rate on MLE-bench Lite from 39.6% to 47.7%. The same applies to kernel search — the search policy is itself an independently optimizable object.
+Important counter-evidence:
+"Prior Knowledge or Search?" (arXiv:2605.19782): LLM agents behave more like greedy optimizers, relying mainly on pretrained priors rather than agentic structure or feedback.
+Correct First, Fast Second (arXiv:2611.12079): with a 7B local model, naive agentic scaffolding is harmful (the first agent scored 3% vs 30% zero-shot); best-of-n with a real oracle raises 3% to 33%.
+NKI-Agent: GRPO with a binary compile reward failed to beat SFT.
+These results matter for topic selection: "add another agent layer" is not a self-justifying contribution; ablation is mandatory.
+
+8. Cross-cutting dimension three: cross-hardware and DSLs
+8.1 DSLs and abstraction levels
+DSL/language
+Abstraction
+Target
+Key point
+Halide
+Algorithm/schedule separation
+CPU/GPU
+Conceptual origin
+TVM TensorIR
+Block level + tensorization
+Multiple backends
+Automatic tensorize
+Triton
+Tile/block-level Python DSL
+NVIDIA-first
+The de-facto target language for modern kernel generation
+TileLang (arXiv:2504.17577, 2025)
+Decouples schedule space from dataflow
+Multiple devices
+Compiler handles thread binding/layout/tensorize/pipelining
+ThunderKittens (arXiv:2410.20399, 2024)
+Warp-level 16×16 tiles
+Hopper
+Faster than "just Triton"
+CUTLASS / CuTe
+Templates + layout algebra
+NVIDIA
+Hand-tuned baseline and a generation target
+Composable Kernel
+Template composition
+AMD CDNA/RDNA
+Multi-vendor counter to cuBLAS
+EXO (PLDI 2022)
+Exocompilation (users write rewrite rules)
+Multiple backends
+Adapts to new accelerators rather than the reverse
+SPIRAL / Lift / Fuse / Rise
+Rule rewriting
+Multiple backends
+Formal generation
+DaCe (SC 2019)
+SDFG dataflow graphs
+CPU/GPU/FPGA
+Data-centric performance portability
+ScaleHLS (HPCA 2022)
+Multi-level MLIR
+FPGA
+768×/3825× over Vivado HLS baselines
+HeteroCL (FPGA 2019)
+Three-paradigm separation
+FPGA
+compute/data/customization
+FINN (FPGA 2017)
+Streaming-architecture generation
+FPGA
+BNN/quantization co-design
+
+8.2 The cross-platform state of play (the latest hard data)
+KernelGenBench: AutoKernel accuracy 87% (NVIDIA) → 25% (Iluvatar CoreX); no method dominates across platforms.
+AMDKernelVault: 62,153 verified HIP samples + 39,893 Triton kernels; Qwen3-8B + SFT + execution-aware RL; PyTorch→HIP 34.0% Pass@1; self-reports "does not uniformly lead on compilation or speed metrics".
+AgenticCANN (arXiv:2607.26661): Ascend C, knowledge-augmented + stage-adaptive evolution; 90–100% feasibility on elementwise/normalization, only 56% on fusion.
+AscendKernelGen (arXiv:2601.07160): proposes NPUKernelBench; L2 compilation success 0%→95.5% (Pass@10).
+NKI-Agent: AWS Trainium; Claude Opus 4.8 + rank-aware prompt → 77.3% pass (single-shot only 6%).
+FABRICA (arXiv:2608.25124): CUDA→Cerebras CSL translation; core success on 28 tasks 6/28 → 26/28.
+EoK (arXiv:2509.14265): RISC-V, median 1.27×.
+JAXBench / MaxKernel: TPU/Pallas.
+ModelBlaster (arXiv:2611.04104): the same loop across CUDA/NVIDIA, OpenCL/Qualcomm, RVV/RISC-V; KernelBench L1/L2/L3 1.85×/5.58×/5.18×, 5.8× over the vendor SDK on Adreno.
+Conclusion: cross-hardware generalization is the most solidly established unsolved problem in this field, and it has already been measured quantitatively.
+8.3 Sparsity and quantization
+SparseTIR (ASPLOS 2023, arXiv:2207.04606): composable sparse formats + composable transformations; GNN operators 1.20–2.34×, sparse attention 1.05–2.98×, sparse convolution 0.56–7.45×.
+SparseDitto (arXiv:2608.05033, 2026): jointly synthesizes representation, execution schedule, and hardware mapping; 2.68×/2.79× average over cuSPARSE (RTX PRO 6000 / H200), up to 146.61×.
+Tilus (arXiv:2504.12984, 2025): a 1–8 bit low-precision tile DSL.
+KernelBenchX (arXiv:2605.04956): quantization tasks 0/30 — quantized operator generation is a clear gap.
+
+9. Open problems and research opportunities (for topic validation)
+Ranked by "strength of evidence × size of gap × feasible window":
+9.1 High-confidence, high-value entry points
+(1) Verification and reward design as an object of study
+Current state: KernelBench-M shows the official checker misses 1/6 of faults and 78.6% of precision faults; KernelAudit shows validators systematically misjudge; "God Does Not Play Dice" shows batch invariance is widely violated.
+Gap: there is still no community-adopted, composable oracle quality standard. KernelBench-M's mutation-analysis framework is the closest, but covers only 188 problems with a single tolerance model.
+Possible work: a theory of oracle adequacy across hardware/dtypes; making test generation a learnable object; joint design of oracle and reward.
+(2) Measurement and mechanism of cross-hardware transfer
+Current state: KernelGenBench shows the 87%→25% collapse; ModelBlaster achieves partial transfer with textual-gradient memory; AMDKernelVault reports "does not uniformly lead".
+Gap: no mechanistic explanation of why it collapses (corpus bias? missing hardware model? ISA semantic discontinuity?).
+Possible work: attribution decomposition across hardware–operator–corpus; a cross-ISA intermediate representation (CAKE IR is one route); predictability of zero-shot hardware transfer.
+(3) Joint characterization of correctness and performance
+Current state: Correct but Slow shows passing correctness can be 300× slower; Atrex shows ~10% of roofline; How Much of a Real Workload shows end-to-end gains compressed to 1 by Amdahl.
+Gap: no framework for "real deployment gain" (not multiples relative to PyTorch, but gain relative to the whole workload).
+Possible work: Amdahl-aware benchmark design; addressable gain as a first-class metric.
+(4) Theoretical corrections for RL on kernel tasks
+Current state: Dr. Kernel identifies the GRPO self-inclusion bias and proposes TRLOO; Kevin proposes cross-turn reward attribution; NKI-Agent reports failure of binary-reward GRPO.
+Gap: policy-gradient theory under long-horizon, sparse, structured rewards remains incomplete; turn-level credit assignment has no accepted solution.
+Possible work: formulate kernel generation as a long-horizon MDP with structured action space; identifiability analysis of reward shaping.
+9.2 Medium-confidence, needs more validation
+(5) The marginal value of agentic scaffolding
+Current state: JustGoal beats some specialized systems with a general agent with zero kernel knowledge; KernelSeek argues "direction" matters more than "tools"; Prior Knowledge or Search argues priors dominate.
+Risk: this conclusion is highly dependent on the base-model version and may expire quickly.
+Possible work: a two-dimensional scaffolding × base-capability scaling law; making "scaffolding gain" itself a measurable object.
+(6) Compositionality and library learning in operator generation
+Current state: DreamCoder's library learning succeeded in the symbolic domain; Voyager's skill library succeeded in embodied agents; daVinci-kernel admits skills only after execution verification; KernelMosaic shows trajectory supervision works.
+Gap: "automatic operator-library growth" in the kernel domain has no systematic study — all current work optimizes single kernels, not library-level reuse.
+Possible work: abstraction-level design for kernel skill libraries; cross-kernel transfer of optimization patterns; semantic deduplication and merging of libraries.
+(7) Joint optimization of multiple operators / whole models
+Current state: the vast majority of work is single-kernel; Kernel Forge, VibeTensor, and AutoMegaKernel begin to touch model level and even runtime level.
+Gap: inter-operator boundaries (fusion decisions, shared memory layouts, pipeline overlap) are almost untouched under LLM-generated frameworks.
+Possible work: unify TASO/Tensat graph-level search with LLM kernel generation; end-to-end differentiable fusion decisions.
+9.3 Long-horizon, high-risk
+(8) LLMs replacing rather than using compilers
+Current state: AI as a Compiler does Triton→PTX directly; CAKE has agents write a schedule IR; VibeTensor has agents write the whole DL stack.
+Risk: verifiability, maintainability, and correctness guarantees are all unresolved.
+Possible work: a closed loop of LLM generation + formal verification; "provable lowering".
+(9) Automatic discovery of new operator primitives (the confluence of main threads three and one)
+Current state: AlphaTensor/AlphaDev show RL can invent arithmetic primitives; AlphaEvolve shows LLM evolution can improve a 56-year-old record; but these results are largely disconnected from GPU kernel generation.
+Gap: there is no bridge between "inventing a new operator" and "writing a fast implementation of an existing operator". FunSearch-style methods need a fast evaluator, and evaluating the correctness of a new operator is itself hard.
+Possible work: use a kernel generator as the fitness function of an AlphaEvolve-style search; search over "operator decompositions" rather than "operator implementations".
+(10) Operator generation at the security and alignment layer
+Current state: KernelArmor handles memory/thread safety; the batch-invariance problem has just been raised; adversarial kernels (side channels, resource exhaustion) are almost unstudied.
+Possible work: specification and verification of safety properties for generated kernels; kernel trustworthiness from a supply-chain perspective.
+9.4 Explicit "do not do" (already saturated or about to be)
+Another agent variant on KernelBench without ablation or a new mechanism — severely homogenized (dozens in 2026).
+Another Triton fine-tuned model without solving verification/generalization — diminishing returns.
+Calling neural operators "operator generation" — terminological misuse; will be judged as an unclear topic.
+
+10. Key-literature quick reference (tiered by importance)
+Tier 1: must-read (necessary to understand the field)
+Work
+Identifier
+Why it is essential
+KernelBench
+arXiv:2502.10517
+The de-facto benchmark; defines fast_p
+KernelBench-Verified
+arXiv:2607.16241
+Shows headline numbers collapse under a strict protocol
+Measuring the Checker (KernelBench-M)
+arXiv:2609.22220
+The strongest methodology for oracle adequacy
+CUDA Agent
+arXiv:2602.24286
+Current SOTA numbers (100/100/92%)
+CUDA-L1
+arXiv:2507.14111 (ICLR'26)
+Contrastive RL, 3.12× average
+Kevin
+arXiv:2507.11948
+Multi-turn RL + cross-turn reward attribution
+Ansor
+arXiv:2006.06762 (OSDI'20)
+Defines the auto-scheduling paradigm
+TVM
+arXiv:1802.04799 (OSDI'18)
+The starting point of the whole stack
+FunSearch
+Nature 625:468, 2024
+The LLM evolutionary search paradigm
+AlphaEvolve
+arXiv:2506.13131
+The strongest result of that paradigm
+AlphaTensor
+Nature 610:47, 2022
+AI invents an operator primitive
+Towards Automated Kernel Generation in the Era of LLMs
+arXiv:2601.15727 (IJCAI'26)
+The field's only dedicated survey
+
+Tier 2: important (forms the argument chain)
+Work
+Identifier
+TritonBench
+arXiv:2502.14752
+KernelGenBench
+arXiv:2607.27231
+SOL-ExecBench
+arXiv:2603.19173
+Dr. Kernel / KernelGYM
+arXiv:2602.05885
+AutoTriton
+arXiv:2507.05687
+QiMeng-Kernel
+arXiv:2511.20100 (AAAI'26)
+Astra
+arXiv:2509.07506
+K-Search
+arXiv:2602.19128
+CudaForge
+arXiv:2511.01884
+KernelPro
+arXiv:2606.26453
+KernelSeek
+arXiv:2611.03517
+Correct but Slow
+arXiv:2607.04454
+How Much of a Real Workload
+arXiv:2609.21058
+Atrex-Bench
+arXiv:2607.14541
+Correctness Illusion
+arXiv:2606.20128
+KernelArmor
+arXiv:2611.18754
+Lean/VerCors kernel proofs
+arXiv:2610.24548
+TensorRight
+POPL 2025, arXiv:2511.17838
+TASO
+SOSP 2019
+Tensat
+arXiv:2101.01332
+MetaSchedule
+arXiv:2205.13603
+TensorIR
+arXiv:2207.04296
+Roller
+OSDI 2022
+Hidet
+arXiv:2210.09603
+AutoPhase
+MLSys 2020
+NeuroVectorizer
+CGO 2020
+MLGO
+arXiv:2101.04808
+EoH
+arXiv:2401.02051 (ICML'24)
+LLM-SR
+arXiv:2404.18400 (ICLR'25)
+DreamCoder
+PLDI 2021
+AlphaDev
+Nature 618:257, 2023
+The New Compiler Stack (survey)
+arXiv:2601.02045
+Large Language Models for AI Infrastructure
+arXiv:2611.19061
+Exploring the Role of LLMs in HPC Programming
+arXiv:2608.26110 (FGCS)
+
+Tier 3: background and adjacent (as needed)
+AutoML-Zero (arXiv:2003.03384), STOP (arXiv:2310.02304), ADAS (arXiv:2408.08435), DGM (arXiv:2505.22954), AI Scientist v2 (arXiv:2504.08066), MLE-bench (arXiv:2410.07095), AIDE (arXiv:2502.13138), MLE-STAR (arXiv:2506.15692), SWE-agent (arXiv:2405.15793), Reflexion (NeurIPS'23), Self-Refine (NeurIPS'23), Self-Debug (ICLR'24), EvalPlus (arXiv:2305.01210), LiveCodeBench (arXiv:2403.07974), BigCodeBench (arXiv:2406.15877), NNSmith (arXiv:2207.13066), Tzer (arXiv:2202.09947), WhiteFox (arXiv:2310.15991), Herbie (PLDI'15), tensor-core numerics (PeerJ CS 7:e330).
+Neural-operator line (cite only when relevant to §5)
+DeepONet (Nature Mach. Intell. 3:218, 2021), FNO (ICLR 2021), Neural Operator (JMLR 24(89), 2023), Geo-FNO (JMLR 24(388), 2023), CNO (NeurIPS 2023), GNOT (ICML 2023), MIONet (SISC 44:A3490, 2022), DeepONet vs FNO fair comparison (CMAME 2022), FNO universal approximation (JMLR 2021), Boullé & Townsend guide (arXiv:2312.14688), DPOT (ICML 2024), Poseidon (NeurIPS 2024), SINDy (PNAS 2016), PDE-FIND (Sci. Adv. 2017), AI Feynman (Sci. Adv. 2020), PySR (arXiv:2305.01582).
+
+11. Papers whose full text could not be obtained (please supply)
+In this survey the overwhelming majority of material is open access on arXiv and can be downloaded directly. The following are confirmed paywalled or inaccessible in full text, ordered by criticality to the review.
+11.1 Highest priority (key nodes in the argument chain)
+1. TASO: Optimizing Deep Learning Computation with Automatic Generation of Graph Substitutions
+Venue: SOSP 2019
+DOI: 10.1145/3341301.3359630
+Use: foundational work on graph-level superoptimization and equivalence checking
+2. FlexTensor: Automatic Schedule Exploration and Optimization for Tensor Programs
+Venue: ASPLOS 2020
+DOI: 10.1145/3373376.3378477
+Use: an early representative of template-free scheduling
+3. AStitch: Enabling a New Multi-Dimensional Optimization Space for Memory-Intensive ML Training and Inference on Modern SIMT Architectures
+Venue: ASPLOS 2022
+DOI: 10.1145/3503222.3507701
+Use: multi-dimensional optimization space for memory-intensive operators
+4. Welder: Scheduling Deep Learning Memory Access via Tile-graph
+Venue: ASPLOS 2023
+DOI: 10.1145/3567955.3567959
+Use: memory-centric tile-graph scheduling
+5. DietCode: Automatic Optimization for Dynamic Tensor Programs
+Venue: MLSys 2022
+Note: the MLSys proceedings page was unreachable; not on arXiv
+Use: automatic scheduling under dynamic shapes
+6. Triton: An Intermediate Language and Compiler for Tiled Neural Network Computations
+Venue: MAPL@PLDI 2019
+DOI: 10.1145/3315508.3329973
+Use: the origin of the modern kernel DSL (an author-hosted PDF exists, but text extraction failed here)
+7. Learning to Optimize Halide with Tree Search and Random Programs
+Venue: SIGGRAPH 2019 / ACM TOG 38(4)
+DOI: 10.1145/3314221.3314606
+Use: the Halide auto-scheduler
+8. Halide: A Language and Compiler for Optimizing Parallelism, Locality, and Recomputation in Image Processing Pipelines
+Venue: PLDI 2013
+DOI: 10.1145/2491956.2462176
+Use: the origin of algorithm/schedule separation
+9. Exocompilation for Productive Programming of Hardware Accelerators (EXO)
+Venue: PLDI 2022
+DOI: 10.1145/3519939.3523446
+Use: the exocompilation paradigm for cross-backend portability
+10. AKG: Automatic Kernel Generation for Neural Processing Units using Polyhedral Transformations
+Venue: PLDI 2021
+DOI: 10.1145/3453483.3454032
+Use: the flagship work on automatic operator generation for a commercial NPU
+11.2 Important (to complete the argument)
+11. Chimera: A Unified Spatial Dataflow Compiler for Accelerators — PPoPP 2021, DOI 10.1145/3437801.3441600
+12. MultiKernelBench: A Multi-platform Benchmark for Kernel Generation — ACM, DOI 10.1145/3832783.3837460
+13. KernelEvolve: Scaling Agentic Kernel Coding for Heterogeneous AI Accelerators at Meta — ISCA 2026, DOI 10.1109/isca66397.2026.00063
+14. VerilogEval — ICCAD 2023, DOI 10.1109/iccad57390.2023.10323812
+15. Revisiting VerilogEval — ACM TODAES 2025, DOI 10.1145/3718088
+16. CompilerGym — CGO 2022, DOI 10.1109/cgo53902.2022.9741258
+17. MLPerf — IEEE Micro 2020, DOI 10.1109/mm.2020.2974843
+18. TpuGraphs — NeurIPS 2023 D&B, DOI 10.52202/075280-3083
+19. The Deep Learning Compiler: A Comprehensive Survey — IEEE TPDS 32(3):708–727, 2021 (arXiv:2002.03794 is open; the journal version is paywalled)
+20. Autotuning in High-Performance Computing Applications — Proc. IEEE 2018, DOI 10.1109/jproc.2018.2841200
+21. A Comprehensive Survey on Program Synthesis With Evolutionary Algorithms — IEEE TEVC 2022, DOI 10.1109/tevc.2022.3162324
+22. Futhark — PLDI 2017, DOI 10.1145/3062341.3062363
+23. Lift: A Functional Data-Parallel IR for High-Performance GPU Code Generation — CGO 2017, DOI 10.1145/3049835.3049841
+24. HeteroCL — FPGA 2019, DOI 10.1145/3289602.3293911
+25. CWEval — LLM4Code 2025, DOI 10.1109/llm4code66737.2025.00009
+11.3 Nature family (abstract readable; full text requires subscription)
+FunSearch — Nature 625:468–475, DOI 10.1038/s41586-023-06924-6
+AlphaTensor — Nature 610:47–53, DOI 10.1038/s41586-022-05172-4
+AlphaDev — Nature 618:257–263, DOI 10.1038/s41586-023-06004-9
+AlphaGeometry — Nature, DOI 10.1038/s41586-023-06747-5
+Coscientist — Nature, DOI 10.1038/s41586-023-06792-0
+DeepONet — Nature Machine Intelligence 3:218–229, DOI 10.1038/s42256-021-00302-5
+11.4 Science / PNAS / other journals (if §5 is included)
+SINDy — PNAS 113:3932–3937, 2016, DOI 10.1073/pnas.1517384113
+PDE-FIND — Science Advances 3:e1602614, 2017, DOI 10.1126/sciadv.1602614
+AI Feynman — Science Advances 6:eaay2631, 2020, DOI 10.1126/sciadv.aay2631
+SINDy-PI — Proc. R. Soc. A 476:20200279, 2020, DOI 10.1098/rspa.2020.0279
+WSINDy — JCP 443:110525, 2021, DOI 10.1016/j.jcp.2021.110525
+MIONet — SIAM J. Sci. Comput. 44:A3490–A3514, 2022, DOI 10.1137/22m1477751
+Chen & Chen — IEEE TNN 6:911–917, 1995, DOI 10.1109/72.392253
+Fasi et al. tensor-core numerics — PeerJ CS 7:e330, 2021, DOI 10.7717/peerj-cs.330
+11.5 Non-paper artifacts (no "paper" to download; cite differently)
+AI CUDA Engineer (Sakana AI, 2025-02 and 2025-09) — technical report + website + HuggingFace artifacts; no arXiv ID
+KernelAgent (Meta/PyTorch, 2026-03) — engineering blog + github.com/meta-pytorch/KernelAgent
+KernelLLM (Meta) — HuggingFace model card; no paper found
+OpenEvolve — open-source implementation, github.com/codelion/openevolve
+TorchInductor / XLA / TensorRT — production systems, no formal papers
+cudaLLM / TritonGPT / "KernelAgent (paper version)" — could not be confirmed to exist; the names should be verified
+
+12. One-page conclusion (for downstream assessment)
+1. Terminology must be defined first. "AI automatic operator generation" maps to four mutually non-communicating research lines in English; the mainstream meaning is LLM/agent-driven GPU kernel generation.
+2. The field is highly saturated but still has two genuine discontinuities.
+Discontinuity one: benchmarks and verification are untrustworthy. KernelBench headline numbers fall from 1.43× to 0.88× under a strict protocol; the official checker misses 1/6 of faults and 78.6% of precision faults. This is the most solid and most attackable gap.
+Discontinuity two: cross-hardware generalization collapses. The same method drops from 87% on NVIDIA to 25% on a domestic NPU. This is the "hardest" scientific problem.
+3. A technical consensus has formed. The effective recipe is LLM proposal + real execution/profiling feedback + search (evolution/MCTS/RL) + strict verification gating. Removing any one component significantly degrades performance, and ablations have demonstrated this.
+4. Counter-consensus matters equally. Evidence suggests agentic scaffolding has diminishing marginal returns on strong base models (JustGoal, KernelSeek), and that naive scaffolding is harmful on small models (Correct First, Fast Second). Any "add another agent layer" topic must include ablations.
+5. The most valuable topics are not "another 2% on KernelBench", but either redefining evaluation (oracle adequacy, addressable gain, batch-invariance contracts) or solving mechanistic problems (predictability of cross-ISA transfer, policy-gradient theory for long-horizon sparse rewards, automatic growth of kernel libraries).
+6. Citation-hygiene reminders (common review deductions):
+"KernelBench-hard" is not a paper; it is colloquial shorthand for the L3–L4 difficulty strata of KernelBench.
+"data-driven equivalence checking of tensor programs" has no paper of that name; it actually points to TASO's random-testing + SMT equivalence checking.
+Confirmed non-paper artifacts: AI CUDA Engineer, KernelAgent, TorchInductor, XLA, TensorRT.
+Many 2026 arXiv entries are preprints; cite them as "preprint" and treat the numbers as preliminary.
+7. If the topic leans toward "inventing new operators" rather than "generating fast implementations": align it with the AlphaTensor / AlphaDev / AlphaEvolve / FunSearch lineage in §4, and enter at the frontier gap — there is currently no bridge between "inventing an operator" and "implementing an operator", which is a real and sparsely explored seam.
+
+This review was produced by 10 parallel retrieval agents; all arXiv IDs were checked against arXiv abstract pages. Entries marked "unverified" should not be cited directly.
