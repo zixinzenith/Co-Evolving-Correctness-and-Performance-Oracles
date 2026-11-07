@@ -1,0 +1,12 @@
+# QuantKernelBench Phase 0 environment — CPU-only, macOS arm64.
+# GPU/CUDA pins are added in Phase 1 on the rented instance.
+# Note: created via TUNA mirrors because repo.anaconda.com is unreachable on this network.
+name: qkb
+channels:
+  - https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/main/
+  - https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/r/
+dependencies:
+  - python=3.11.18
+  - pip
+  - pip:
+      - -r requirements-lock.txt

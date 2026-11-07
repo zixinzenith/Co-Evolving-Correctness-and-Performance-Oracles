@@ -1,0 +1,6 @@
+# Exact pins, Phase 0 (CPU-only; macOS arm64 PyPI wheels carry no CUDA).
+# torch on arm64 mac is CPU-only by default — no special CPU wheel index needed.
+torch==2.15.0
+numpy==2.4.6
+pytest==9.2.0
+pyyaml==6.0.4
