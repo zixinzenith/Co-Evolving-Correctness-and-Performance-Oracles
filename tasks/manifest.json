@@ -1,0 +1,122 @@
+[
+ {
+  "name": "fp8_cast_e4m3",
+  "group": "quant_pack",
+  "verification": "bit_exact",
+  "n_shapes": {
+   "visible": 2,
+   "hidden": 5
+  },
+  "expert_baseline": null
+ },
+ {
+  "name": "fp8_cast_e5m2",
+  "group": "quant_pack",
+  "verification": "bit_exact",
+  "n_shapes": {
+   "visible": 2,
+   "hidden": 5
+  },
+  "expert_baseline": null
+ },
+ {
+  "name": "int4_convert_gptq_to_awq",
+  "group": "quant_pack",
+  "verification": "bit_exact",
+  "n_shapes": {
+   "visible": 2,
+   "hidden": 5
+  },
+  "expert_baseline": null
+ },
+ {
+  "name": "int4_pack_awq",
+  "group": "quant_pack",
+  "verification": "bit_exact",
+  "n_shapes": {
+   "visible": 2,
+   "hidden": 5
+  },
+  "expert_baseline": null
+ },
+ {
+  "name": "int4_pack_gptq",
+  "group": "quant_pack",
+  "verification": "bit_exact",
+  "n_shapes": {
+   "visible": 2,
+   "hidden": 5
+  },
+  "expert_baseline": null
+ },
+ {
+  "name": "int4_pack_zeros_gptq",
+  "group": "quant_pack",
+  "verification": "bit_exact",
+  "n_shapes": {
+   "visible": 2,
+   "hidden": 5
+  },
+  "expert_baseline": null
+ },
+ {
+  "name": "int4_quantize_asym",
+  "group": "quant_pack",
+  "verification": "bit_exact",
+  "n_shapes": {
+   "visible": 2,
+   "hidden": 5
+  },
+  "expert_baseline": null
+ },
+ {
+  "name": "int4_unpack_awq",
+  "group": "quant_pack",
+  "verification": "bit_exact",
+  "n_shapes": {
+   "visible": 2,
+   "hidden": 5
+  },
+  "expert_baseline": null
+ },
+ {
+  "name": "int4_unpack_gptq",
+  "group": "quant_pack",
+  "verification": "bit_exact",
+  "n_shapes": {
+   "visible": 2,
+   "hidden": 5
+  },
+  "expert_baseline": null
+ },
+ {
+  "name": "int8_quant_per_channel",
+  "group": "quant_pack",
+  "verification": "bit_exact",
+  "n_shapes": {
+   "visible": 2,
+   "hidden": 5
+  },
+  "expert_baseline": null
+ },
+ {
+  "name": "int8_quant_per_token",
+  "group": "quant_pack",
+  "verification": "bit_exact",
+  "n_shapes": {
+   "visible": 2,
+   "hidden": 5
+  },
+  "expert_baseline": null
+ },
+ {
+  "name": "w4a16_dequant_gptq",
+  "group": "quant_pack",
+  "verification": "bit_exact",
+  "n_shapes": {
+   "visible": 2,
+   "hidden": 5
+  },
+  "expert_baseline": null
+ }
+]

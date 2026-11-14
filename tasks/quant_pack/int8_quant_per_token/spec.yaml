@@ -1,0 +1,18 @@
+name: int8_quant_per_token
+group: quant_pack
+description: |
+  Dynamic symmetric INT8 quantization per token (row): scale = amax(|x|)/127.
+inputs: x fp32 (M,K)
+outputs: q int8 (M,K); scales fp32 (M,1)
+constraints: "K % 8 == 0, N % 8 == 0, K % g == 0"
+format_ref: formats/int4_w4a16_packing.md
+verification:
+  mode: bit_exact
+shapes:
+  visible: [{'K': 64, 'N': 16, 'g': 32, 'M': 4}, {'K': 128, 'N': 32, 'g': 64, 'M': 8}]
+  hidden: [{'K': 256, 'N': 64, 'g': 128, 'M': 16}, {'K': 512, 'N': 128, 'g': 64, 'M': 1}, {'K': 1024, 'N': 256, 'g': 128, 'M': 32}, {'K': 96, 'N': 24, 'g': 48, 'M': 2}, {'K': 4096, 'N': 512, 'g': 128, 'M': 64}]
+baseline:
+  pytorch: none
+  torch_compile: false
+  expert: null
+adversarial_classes: [boundary_nibbles, zero_offset_wrap, halfway_rounding, saturation, outliers, zero_rows]

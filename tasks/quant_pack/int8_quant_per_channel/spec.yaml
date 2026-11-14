@@ -1,0 +1,19 @@
+name: int8_quant_per_channel
+group: quant_pack
+description: |
+  Symmetric INT8 quantization per output channel: scale = amax(|w|)/127, round-half-even, clip
+  [-128,127]. Zero channel forces the scale=1 fallback.
+inputs: w fp32 (K,N)
+outputs: q int8 (K,N); scales fp32 (N,)
+constraints: "K % 8 == 0, N % 8 == 0, K % g == 0"
+format_ref: formats/int4_w4a16_packing.md
+verification:
+  mode: bit_exact
+shapes:
+  visible: [{'K': 64, 'N': 16, 'g': 32, 'M': 4}, {'K': 128, 'N': 32, 'g': 64, 'M': 8}]
+  hidden: [{'K': 256, 'N': 64, 'g': 128, 'M': 16}, {'K': 512, 'N': 128, 'g': 64, 'M': 1}, {'K': 1024, 'N': 256, 'g': 128, 'M': 32}, {'K': 96, 'N': 24, 'g': 48, 'M': 2}, {'K': 4096, 'N': 512, 'g': 128, 'M': 64}]
+baseline:
+  pytorch: none
+  torch_compile: false
+  expert: null
+adversarial_classes: [boundary_nibbles, zero_offset_wrap, halfway_rounding, saturation, outliers, zero_rows]
