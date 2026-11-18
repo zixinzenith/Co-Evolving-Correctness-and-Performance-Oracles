@@ -1,0 +1,21 @@
+name: gemv_w4a16_gptq
+group: dequant_gemv
+description: |
+  W4A16 GEMV against GPTQ-packed weights: dequant w = (q - z)*s per group along K, then
+  y_n = sum_k w_kn x_k. Bug axes: buffer orientation (qweight packs along K but qzeros along
+  N), the +1 zero offset, group-index off-by-one at K boundaries, repeat vs tile for scales.
+inputs: qweight int32 (K/8,N); qzeros int32 (K/g,N/8); scales fp32 (K/g,N); x fp32 (K,)
+outputs: y fp32 (N,)
+constraints: "K % 8 == 0, N % 8 == 0, K % g == 0"
+format_ref: formats/int4_w4a16_packing.md
+verification:
+  mode: derived_tolerance
+  tolerance: {kind: sum_abs, coef: 0.51, atol: 1.0e-6, int_shift: 0}
+shapes:
+  visible: [{'K': 64, 'N': 16, 'g': 32, 'M': 4}, {'K': 128, 'N': 32, 'g': 64, 'M': 8}]
+  hidden: [{'K': 256, 'N': 64, 'g': 128, 'M': 16}, {'K': 512, 'N': 128, 'g': 64, 'M': 1}, {'K': 1024, 'N': 256, 'g': 128, 'M': 32}, {'K': 96, 'N': 24, 'g': 48, 'M': 2}, {'K': 4096, 'N': 512, 'g': 128, 'M': 64}]
+baseline:
+  pytorch: dequant + torch.matmul
+  torch_compile: true
+  expert: marlin
+adversarial_classes: [boundary_nibbles, zero_offset_wrap, outliers]

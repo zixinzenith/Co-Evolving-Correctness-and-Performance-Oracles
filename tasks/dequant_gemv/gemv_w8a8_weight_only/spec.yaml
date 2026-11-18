@@ -1,0 +1,22 @@
+name: gemv_w8a8_weight_only
+group: dequant_gemv
+description: |
+  Weight-only INT8 GEMV: symmetric per-output-channel weights w_q (K, N) with scales
+  (N,), dequant on the fly, y_n = sum_k w_q_kn s_n x_k. Bug axes: broadcasting scales along
+  K instead of N, dequantizing x too (there is no activation quantization here), missing the
+  scale=1 fallback for an all-zero channel.
+inputs: w_q int8 (K,N); w_scales fp32 (N,); x fp32 (K,)
+outputs: y fp32 (N,)
+constraints: "K % 8 == 0, N % 8 == 0"
+format_ref: formats/rounding_and_scale_conventions.md
+verification:
+  mode: derived_tolerance
+  tolerance: {kind: sum_abs, coef: 0.51, atol: 1.0e-6, int_shift: 0}
+shapes:
+  visible: [{'K': 64, 'N': 16, 'g': 32, 'M': 4}, {'K': 128, 'N': 32, 'g': 64, 'M': 8}]
+  hidden: [{'K': 256, 'N': 64, 'g': 128, 'M': 16}, {'K': 512, 'N': 128, 'g': 64, 'M': 1}, {'K': 1024, 'N': 256, 'g': 128, 'M': 32}, {'K': 96, 'N': 24, 'g': 48, 'M': 2}, {'K': 4096, 'N': 512, 'g': 128, 'M': 64}]
+baseline:
+  pytorch: dequant + torch.matmul
+  torch_compile: true
+  expert: humming
+adversarial_classes: [saturation, outliers, zero_rows]

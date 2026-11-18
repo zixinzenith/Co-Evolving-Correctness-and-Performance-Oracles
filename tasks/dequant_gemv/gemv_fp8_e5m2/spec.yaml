@@ -1,0 +1,22 @@
+name: gemv_fp8_e5m2
+group: dequant_gemv
+description: |
+  FP8 GEMV with the e5m2 format: 5 exponent bits, 2 mantissa bits, inf preserved. The looser
+  format widens the tolerance but also widens the failure space. Bug axes: reusing the e4m3fn
+  decode (saturation at 448 instead of inf at the top of the range), missing subnormals at
+  the bottom, per-tensor scale broadcast.
+inputs: w_bits uint8 (K,N); w_scale fp32 (1,); x fp32 (K,)
+outputs: y fp32 (N,)
+constraints: "K % 8 == 0, N % 8 == 0"
+format_ref: formats/fp8_e4m3_e5m2.md
+verification:
+  mode: derived_tolerance
+  tolerance: {kind: sum_abs, coef: 0.2, atol: 1.0e-6, int_shift: 0}
+shapes:
+  visible: [{'K': 64, 'N': 16, 'g': 32, 'M': 4}, {'K': 128, 'N': 32, 'g': 64, 'M': 8}]
+  hidden: [{'K': 256, 'N': 64, 'g': 128, 'M': 16}, {'K': 512, 'N': 128, 'g': 64, 'M': 1}, {'K': 1024, 'N': 256, 'g': 128, 'M': 32}, {'K': 96, 'N': 24, 'g': 48, 'M': 2}, {'K': 4096, 'N': 512, 'g': 128, 'M': 64}]
+baseline:
+  pytorch: decode + torch.matmul
+  torch_compile: true
+  expert: _scaled_mm
+adversarial_classes: [saturation, halfway_rounding, outliers]

@@ -1,0 +1,22 @@
+name: gemm_w8a8_dequant
+group: gemm
+description: |
+  W8A8 GEMM with scale dequantization: exact int32 accumulation of int8 x (M, K) and int8
+  w (K, N), then y = acc * x_scale_m * w_scale_n. Bug axes: applying per-token scales to the
+  weight axis (or vice versa), fp32 accumulation of the int8 product, dividing instead of
+  multiplying by a scale.
+inputs: x_q int8 (M,K); x_scales fp32 (M,); w_q int8 (K,N); w_scales fp32 (N,)
+outputs: y fp32 (M,N)
+constraints: "K % 8 == 0, N % 8 == 0, K * 127 * 127 < 2^31"
+format_ref: formats/rounding_and_scale_conventions.md
+verification:
+  mode: derived_tolerance
+  tolerance: {kind: sum_abs, coef: 0.51, atol: 1.0e-6, int_shift: 0}
+shapes:
+  visible: [{'K': 64, 'N': 16, 'g': 32, 'M': 4}, {'K': 128, 'N': 32, 'g': 64, 'M': 8}]
+  hidden: [{'K': 256, 'N': 64, 'g': 128, 'M': 16}, {'K': 512, 'N': 128, 'g': 64, 'M': 1}, {'K': 1024, 'N': 256, 'g': 128, 'M': 32}, {'K': 96, 'N': 24, 'g': 48, 'M': 2}, {'K': 4096, 'N': 512, 'g': 128, 'M': 64}]
+baseline:
+  pytorch: torch._int_mm + scale dequant
+  torch_compile: true
+  expert: humming
+adversarial_classes: [saturation, outliers, zero_rows]
