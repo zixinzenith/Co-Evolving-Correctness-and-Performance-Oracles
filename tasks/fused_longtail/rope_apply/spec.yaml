@@ -1,0 +1,23 @@
+name: rope_apply
+group: fused_longtail
+description: |
+  Rotary position embedding (interleaved half convention) applied to a single-head tensor:
+  given precomputed cos/sin tables (S, D/2), out_even = q_even*cos - q_odd*sin and
+  out_odd = q_odd*cos + q_even*sin. Elementwise float math; the tolerance covers
+  reassociation only. Bug axes: rotate-half (split the D axis in two halves) instead of
+  interleaved pairs, cos/sin swapped, wrong sign on the odd term.
+inputs: q fp32 (S,D); cos fp32 (S,D/2); sin fp32 (S,D/2)
+outputs: out fp32 (S,D)
+constraints: "D % 8 == 0"
+format_ref: formats/rounding_and_scale_conventions.md
+verification:
+  mode: derived_tolerance
+  tolerance: {kind: elementwise, rtol: 1.0e-5, atol: 1.0e-6, int_shift: 0}
+shapes:
+  visible: [{'S': 16, 'D': 32}, {'S': 32, 'D': 64}]
+  hidden: [{'S': 64, 'D': 128}, {'S': 24, 'D': 48}, {'S': 128, 'D': 256}, {'S': 40, 'D': 96}]
+baseline:
+  pytorch: eager reference
+  torch_compile: true
+  expert: null
+adversarial_classes: [outliers]

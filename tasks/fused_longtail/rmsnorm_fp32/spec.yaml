@@ -1,0 +1,22 @@
+name: rmsnorm_fp32
+group: fused_longtail
+description: |
+  RMSNorm in fp32: y = x / sqrt(mean(x^2) + eps) * w, eps = 1e-6. Pure float math, so the
+  tolerance only has to cover accumulation-order differences — but a fused kernel that
+  computes the mean of x instead of x^2, or uses eps inside the wrong sqrt, leaves that
+  band instantly. A zero row must produce an all-zero output, not NaN.
+inputs: x fp32 (M,K); w fp32 (K,)
+outputs: y fp32 (M,K)
+constraints: "K % 8 == 0"
+format_ref: formats/rounding_and_scale_conventions.md
+verification:
+  mode: derived_tolerance
+  tolerance: {kind: elementwise, rtol: 1.0e-4, atol: 1.0e-5, int_shift: 0}
+shapes:
+  visible: [{'M': 8, 'K': 64}, {'M': 16, 'K': 128}]
+  hidden: [{'M': 64, 'K': 256}, {'M': 1, 'K': 512}, {'M': 32, 'K': 1024}, {'M': 12, 'K': 96}, {'M': 128, 'K': 4096}]
+baseline:
+  pytorch: eager reference
+  torch_compile: true
+  expert: null
+adversarial_classes: [outliers, zero_rows]

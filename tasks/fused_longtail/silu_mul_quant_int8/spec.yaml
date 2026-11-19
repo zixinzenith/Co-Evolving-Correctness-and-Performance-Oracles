@@ -1,0 +1,24 @@
+name: silu_mul_quant_int8
+group: fused_longtail
+description: |
+  Fused SwiLU-mul + per-token INT8 quantization: p = silu(a) * b = a * sigmoid(a) * b, then
+  symmetric per-token INT8 (scale = amax(|p_row|)/127). The sigmoid's exp() differs in the
+  last ulp between implementations, flipping codes at halfway points — codes are checked
+  within +-1, scales tightly. Bug axes: silu applied to b instead of a, sigmoid computed as
+  1/(1+exp(x)) vs exp(x)/(1+exp(x)) divergence beyond the tolerance band, dropping the
+  zero-row scale fallback.
+inputs: a fp32 (M,K); b fp32 (M,K)
+outputs: q int8 (M,K); s fp32 (M,)
+constraints: "K % 8 == 0"
+format_ref: formats/rounding_and_scale_conventions.md
+verification:
+  mode: derived_tolerance
+  tolerance: {kind: elementwise, rtol: 1.0e-4, atol: 1.0e-6, int_shift: 1}
+shapes:
+  visible: [{'M': 8, 'K': 64}, {'M': 16, 'K': 128}]
+  hidden: [{'M': 64, 'K': 256}, {'M': 1, 'K': 512}, {'M': 32, 'K': 1024}, {'M': 12, 'K': 96}, {'M': 128, 'K': 4096}]
+baseline:
+  pytorch: eager reference
+  torch_compile: true
+  expert: null
+adversarial_classes: [halfway_rounding, saturation, zero_rows]

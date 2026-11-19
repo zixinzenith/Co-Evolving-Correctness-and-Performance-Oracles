@@ -1,0 +1,23 @@
+name: moe_router_topk
+group: fused_longtail
+description: |
+  MoE router: softmax over expert logits (M, E), take top-k, renormalize the kept weights.
+  Near-tie and exact-tie logits are planted at the top-k boundary: indices must match
+  exactly (ties broken by lower expert index first), probabilities only within the softmax
+  reassociation band. Bug axes: stable-sort in the wrong direction (ties resolved by higher
+  index), renormalizing before top-k, softmax over the wrong axis.
+inputs: logits fp32 (M,E); k int64 (1)
+outputs: probs fp32 (M,E); idx int64 (M,k); w_topk fp32 (M,k)
+constraints: "E % 8 == 0, k < E, k >= 2"
+format_ref: formats/rounding_and_scale_conventions.md
+verification:
+  mode: derived_tolerance
+  tolerance: {kind: elementwise, rtol: 1.0e-5, atol: 1.0e-8, int_shift: 0}
+shapes:
+  visible: [{'M': 8, 'E': 16, 'k': 4}, {'M': 16, 'E': 32, 'k': 8}]
+  hidden: [{'M': 64, 'E': 64, 'k': 8}, {'M': 1, 'E': 256, 'k': 16}, {'M': 32, 'E': 128, 'k': 4}, {'M': 12, 'E': 24, 'k': 6}]
+baseline:
+  pytorch: softmax + topk
+  torch_compile: true
+  expert: null
+adversarial_classes: [halfway_rounding, zero_rows]

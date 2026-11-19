@@ -1,0 +1,22 @@
+name: kv_quant_int4_asym_per_head
+group: kv_cache
+description: |
+  Asymmetric per-token INT4 KV-cache quantization with per-group (group size g along D)
+  scales and zero points given as inputs: q = round((k - z)/s), clipped to [0, 15].
+  A group that is entirely zero has s=0 and must take the s=1 fallback. Bug axes: symmetric
+  abs-amax semantics instead of the asymmetric (z, s) pair, quantizing along S instead of D,
+  group off-by-one at the D boundary, half-up rounding.
+inputs: k fp32 (B,H,S,D); scales fp32 (B,H,S,D/g); zeros fp32 (B,H,S,D/g)
+outputs: q int64 (B,H,S,D) in [0,15]
+constraints: "D % g == 0, g >= 4"
+format_ref: formats/rounding_and_scale_conventions.md
+verification:
+  mode: bit_exact
+shapes:
+  visible: [{'B': 2, 'H': 4, 'S': 16, 'D': 32, 'g': 8}, {'B': 1, 'H': 8, 'S': 32, 'D': 64, 'g': 16}]
+  hidden: [{'B': 2, 'H': 8, 'S': 64, 'D': 128, 'g': 32}, {'B': 4, 'H': 2, 'S': 24, 'D': 48, 'g': 16}, {'B': 1, 'H': 16, 'S': 128, 'D': 256, 'g': 64}, {'B': 3, 'H': 4, 'S': 40, 'D': 96, 'g': 24}]
+baseline:
+  pytorch: quant + dequant reference
+  torch_compile: true
+  expert: null
+adversarial_classes: [boundary_nibbles, halfway_rounding, zero_rows]

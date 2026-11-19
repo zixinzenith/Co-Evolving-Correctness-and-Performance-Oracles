@@ -1,0 +1,24 @@
+name: layernorm_residual_quant_int8
+group: fused_longtail
+description: |
+  Fused residual add + LayerNorm + per-token INT8 quantization: res_out = x + res (returned
+  for the next layer), y = LN(res_out) with learned w, b and eps = 1e-5, then symmetric
+  per-token INT8 with scale = amax(|y_row|)/127. Reduction order may flip codes at exact
+  halfway points, so int codes are checked within +-1 while scales and res_out are tight.
+  Bug axes: biased vs unbiased variance, eps inside vs outside the sqrt, quantizing res_out
+  instead of y, dropping the scale fallback.
+inputs: x fp32 (M,K); res fp32 (M,K); w fp32 (K,); b fp32 (K,)
+outputs: q int8 (M,K); s fp32 (M,); res_out fp32 (M,K)
+constraints: "K % 8 == 0"
+format_ref: formats/rounding_and_scale_conventions.md
+verification:
+  mode: derived_tolerance
+  tolerance: {kind: elementwise, rtol: 1.0e-4, atol: 1.0e-6, int_shift: 1}
+shapes:
+  visible: [{'M': 8, 'K': 64}, {'M': 16, 'K': 128}]
+  hidden: [{'M': 64, 'K': 256}, {'M': 1, 'K': 512}, {'M': 32, 'K': 1024}, {'M': 12, 'K': 96}, {'M': 128, 'K': 4096}]
+baseline:
+  pytorch: eager reference
+  torch_compile: true
+  expert: null
+adversarial_classes: [halfway_rounding, outliers, zero_rows]

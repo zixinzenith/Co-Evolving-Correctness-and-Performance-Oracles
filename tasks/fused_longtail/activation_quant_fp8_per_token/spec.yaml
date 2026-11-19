@@ -1,0 +1,21 @@
+name: activation_quant_fp8_per_token
+group: fused_longtail
+description: |
+  Dynamic per-token FP8 activation quantization (e4m3fn): scale = amax(|x_row|)/448, then
+  x/scale cast to e4m3fn bytes. The amax element lands exactly on the 448 boundary; a zero
+  row takes the scale=1 fallback and a tiny row lands in the subnormal range. Bug axes:
+  half-up scale rounding, dividing by 448 twice, e5m2 cast, dropping the fallback.
+inputs: x fp32 (M,K)
+outputs: bits uint8 (M,K); s fp32 (M,)
+constraints: "K % 8 == 0"
+format_ref: formats/fp8_e4m3_e5m2.md
+verification:
+  mode: bit_exact
+shapes:
+  visible: [{'M': 8, 'K': 64}, {'M': 16, 'K': 128}]
+  hidden: [{'M': 64, 'K': 256}, {'M': 1, 'K': 512}, {'M': 32, 'K': 1024}, {'M': 12, 'K': 96}, {'M': 128, 'K': 4096}]
+baseline:
+  pytorch: scale + cast to float8_e4m3fn
+  torch_compile: true
+  expert: null
+adversarial_classes: [saturation, halfway_rounding, zero_rows]

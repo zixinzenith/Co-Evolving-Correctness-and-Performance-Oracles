@@ -1,0 +1,22 @@
+name: residual_add_quant_fp8
+group: fused_longtail
+description: |
+  Fused residual add + FP8 cast with a fixed per-tensor scale: bits = e4m3fn((x + res)/scale).
+  The fp32 add is exact, the cast is round-to-nearest-even and saturates at 448 — inputs are
+  built so both the saturation boundary and halfway codes are exercised. Bug axes: clamping
+  to 448 in fp32 first (same bits here, different after a scale change), casting before the
+  add, dividing by 448/scale instead of scale.
+inputs: x fp32 (M,K); res fp32 (M,K); scale fp32 (1,)
+outputs: bits uint8 (M,K)
+constraints: "K % 8 == 0"
+format_ref: formats/fp8_e4m3_e5m2.md
+verification:
+  mode: bit_exact
+shapes:
+  visible: [{'M': 8, 'K': 64}, {'M': 16, 'K': 128}]
+  hidden: [{'M': 64, 'K': 256}, {'M': 1, 'K': 512}, {'M': 32, 'K': 1024}, {'M': 12, 'K': 96}, {'M': 128, 'K': 4096}]
+baseline:
+  pytorch: add + cast to float8_e4m3fn
+  torch_compile: true
+  expert: null
+adversarial_classes: [saturation, halfway_rounding, outliers, zero_rows]

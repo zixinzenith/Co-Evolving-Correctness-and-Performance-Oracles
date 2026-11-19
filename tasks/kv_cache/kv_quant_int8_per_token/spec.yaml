@@ -1,0 +1,21 @@
+name: kv_quant_int8_per_token
+group: kv_cache
+description: |
+  KV-cache quantization, per-token symmetric INT8: quantize each token row of k
+  (B, H, S, D) along the head dimension with scale = amax(|k_row|)/127, round-half-even,
+  clip [-128, 127]. An all-zero token forces the scale=1 fallback. Bug axes: quantizing
+  along S instead of D, dropping the fallback, rounding half-up.
+inputs: k fp32 (B,H,S,D)
+outputs: q int8 (B,H,S,D); scales fp32 (B,H,S,)
+constraints: "D % 8 == 0"
+format_ref: formats/rounding_and_scale_conventions.md
+verification:
+  mode: bit_exact
+shapes:
+  visible: [{'B': 2, 'H': 4, 'S': 16, 'D': 32, 'g': 8}, {'B': 1, 'H': 8, 'S': 32, 'D': 64, 'g': 16}]
+  hidden: [{'B': 2, 'H': 8, 'S': 64, 'D': 128, 'g': 32}, {'B': 4, 'H': 2, 'S': 24, 'D': 48, 'g': 16}, {'B': 1, 'H': 16, 'S': 128, 'D': 256, 'g': 64}, {'B': 3, 'H': 4, 'S': 40, 'D': 96, 'g': 24}]
+baseline:
+  pytorch: quant + dequant reference
+  torch_compile: true
+  expert: null
+adversarial_classes: [saturation, halfway_rounding, zero_rows]
