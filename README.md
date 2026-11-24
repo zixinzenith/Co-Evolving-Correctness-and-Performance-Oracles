@@ -59,3 +59,11 @@ Phase 0 complete: 40/40 tasks validated (`tasks/manifest.json`), verifier + muta
 ## License
 
 MIT
+
+## Tooling note
+
+Built with heavy use of AI coding assistants — literature scanning and cross-checking
+(`notes/`), drafting of the format specs, and scaffolding and iterating on the reference
+implementations and verifier — under my direction and review. The research framing, task
+selection and verification methodology are my own, and I'm happy to walk through any part
+of the code.
